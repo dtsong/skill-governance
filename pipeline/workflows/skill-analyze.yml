@@ -1,0 +1,48 @@
+name: Skill Analyze
+on:
+  pull_request:
+    paths:
+      - 'skills/**'
+      - 'shared-references/**'
+      - 'pipeline/**'
+      - '.github/workflows/skill-analyze.yml'
+
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install pyyaml
+      - name: Analyze patterns
+        run: python3 pipeline/scripts/analyze-patterns.py > analysis-report.md
+      - name: Check portability
+        run: bash pipeline/scripts/check-portability.sh
+      - name: Context load analysis
+        run: python3 pipeline/scripts/context-load-analysis.py > context-report.md
+      - name: Publish report to step summary
+        if: github.event_name == 'pull_request'
+        run: |
+          {
+            echo "## Skill Analysis Report"
+            echo
+            if [ -f analysis-report.md ]; then
+              cat analysis-report.md
+              echo
+            fi
+            if [ -f context-report.md ]; then
+              cat context-report.md
+              echo
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload analysis artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: skill-analysis
+          path: |
+            analysis-report.md
+            context-report.md
