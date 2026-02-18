@@ -33,7 +33,7 @@ task_types:
     description: "Classification, code review, gap analysis"
   reasoning:
     preferred: opus
-    description: "Adversarial security analysis, formal verification, vulnerability chain synthesis"
+    description: "Tasks requiring adversarial reasoning, formal constraint satisfaction, or long-chain causal reasoning across system boundaries — regardless of application domain (e.g., adversarial security analysis, formal verification, vulnerability chain synthesis)"
 
 # Tier-to-model mapping
 tiers:
