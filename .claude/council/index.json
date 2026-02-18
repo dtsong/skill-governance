@@ -1,0 +1,20 @@
+{
+  "version": "1.0",
+  "workspace": "/Users/danielsong/Development/llm-skills/skill-governance",
+  "sessions": [
+    {
+      "id": "model-routing-decisions-20260217-2003",
+      "slug": "model-routing-decisions",
+      "idea": "Model routing decisions for Sonnet 4.6 PR — SOC coordinator tier, threat-model-skill ceiling, Opus scope boundary",
+      "created": "2026-02-17T20:03:00Z",
+      "updated": "2026-02-17T20:03:00Z",
+      "phase": "completed",
+      "status": "completed",
+      "agents": ["Oracle", "Strategist", "Architect", "Skeptic", "Tuner"],
+      "skills_used": [],
+      "contract_generated": false,
+      "contract_issue": null,
+      "archived_to": null
+    }
+  ]
+}
