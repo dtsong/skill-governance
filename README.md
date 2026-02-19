@@ -66,31 +66,84 @@ Updates hooks and configs while preserving your local overrides.
 
 ## How It Works
 
-```
-┌──────────────────────────────────────────────────┐
-│                  Agent Request                    │
-└──────────────┬───────────────────────────────────┘
-               ▼
-┌──────────────────────────────────────────────────┐
-│           Coordinator (≤800 tokens)              │
-│  Classifies task → picks one specialist          │
-└──────────────┬───────────────────────────────────┘
-               ▼
-┌──────────────────────────────────────────────────┐
-│          Specialist (≤2,000 tokens)              │
-│  Runs procedure → loads references if needed     │
-└──────────────┬───────────────────────────────────┘
-               ▼
-┌──────────────────────────────────────────────────┐
-│       Reference File (≤1,500 tokens)             │
-│  Checklists, templates, lookup tables            │
-└──────────────────────────────────────────────────┘
+```mermaid
+flowchart TD
+    req(["Agent Request"])
 
-Worst-case context load: ≤5,500 tokens
-(coordinator + largest specialist + largest reference)
+    subgraph l1["Layer 1 — Always loaded"]
+        coord["Coordinator\n≤ 800 tokens\nClassifies task · selects one specialist"]
+    end
+
+    subgraph l2["Layer 2 — Loaded on demand"]
+        spec["Specialist\n≤ 2,000 tokens\nExecutes procedure for this task type"]
+    end
+
+    subgraph l3["Layer 3 — Conditional"]
+        ref["Reference File\n≤ 1,500 tokens\nChecklists · templates · lookup tables"]
+    end
+
+    req --> coord
+    coord -->|"loads exactly one"| spec
+    spec -->|"if procedure requires it"| ref
+    ref --> total(["Worst-case context: ≤ 5,500 tokens"])
 ```
 
 The coordinator is always loaded. It reads the task, classifies it, and loads exactly one specialist. The specialist executes its procedure and conditionally loads reference files. At no point are multiple specialists or all references loaded simultaneously.
+
+### Governance Workflow
+
+```mermaid
+flowchart LR
+    subgraph author["Author"]
+        skill["Write SKILL.md\ncoordinator · specialist · reference"]
+    end
+
+    subgraph enforce["Enforce"]
+        hooks["Pre-commit hooks\nbudget · frontmatter\nisolation · security"]
+        ci["CI — GitHub Actions\naudit report on PR"]
+    end
+
+    subgraph deploy["Deploy"]
+        merged["Skills in repo\ncompliant · tested · budgeted"]
+    end
+
+    author -->|"git commit"| hooks
+    hooks -->|"violations\nblock commit"| author
+    hooks -->|"passes"| ci
+    ci -->|"PR merged"| merged
+```
+
+> `install.sh` sets up hooks, config, templates, and CI workflows into your skill repo in one step.
+
+## CI/CD Integration
+
+`install.sh` installs four GitHub Actions workflows into your repo. Each maps to a distinct stage of the pipeline:
+
+| Stage | Trigger | Checks | Blocking |
+|-------|---------|--------|----------|
+| 1 · Lint & Validate | Every push | Token budgets · frontmatter · reference integrity · cross-skill isolation | Yes — blocks merge |
+| 2 · Static Analysis | Every PR | Pattern compliance · writing rules · portability · context load | Advisory — PR comment |
+| 3 · Eval Execution | Merge to main · manual | Runs eval cases · regression detection | Yes — on regression |
+| 4 · Publish | Release tag | Packages skills · version bump · distribute | — |
+
+### What `install.sh` sets up
+
+- `.github/workflows/skill-lint.yml` — Stage 1, runs on every push to `skills/**`
+- `.github/workflows/skill-analyze.yml` — Stage 2, runs on every PR touching `skills/**`
+- `.github/workflows/skill-eval.yml` — Stage 3, runs on merge to main; also manually dispatchable
+- `.github/workflows/skill-publish.yml` — Stage 4, runs on `v*` tags
+- `pipeline/scripts/` — validation, analysis, and eval scripts
+- `pipeline/config/` — budget thresholds, security rules, routing config
+- `.githooks/pre-commit` — local enforcement before commits reach CI
+
+### What you need
+
+- GitHub Actions enabled on your repo
+- `ANTHROPIC_API_KEY` secret added to repo settings (Stage 3 eval execution only — Stages 1–2 have no API dependency)
+
+### Customizing per repo
+
+Per-skill budget overrides go in `pipeline/config/budgets.json` with a `reason` field. Security scan suppressions go in `pipeline/config/security-suppressions.json`. Both files are preserved on upgrade. See the [CI/CD Pipeline guide](guides/skill-cicd-pipeline.md) for the full configuration reference.
 
 ## Documentation
 
