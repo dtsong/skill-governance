@@ -94,14 +94,14 @@ Create `pipeline/config/model-routing.yaml`:
 ```yaml
 tiers:
   haiku:
-    claude_code: claude-haiku-4-5
+    claude_code: claude-haiku-4-5-20251001
     cost_ratio: 1
   sonnet:
-    claude_code: claude-sonnet-4-5
-    cost_ratio: 8
+    claude_code: claude-sonnet-4-6
+    cost_ratio: 5
   opus:
     claude_code: claude-opus-4-6
-    cost_ratio: 60
+    cost_ratio: 25
 
 budget_zones:
   yellow_threshold: 0.70
