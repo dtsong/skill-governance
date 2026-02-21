@@ -335,8 +335,10 @@ do_init() {
   if [[ -f "${SUITE_DIR}/.governance-version" ]]; then
     local existing
     existing=$(cat "${SUITE_DIR}/.governance-version")
-    warn "Governance already initialized (${existing}). Use --upgrade instead."
-    die "Aborting --init. Use --upgrade to update."
+    log "Governance already installed (${existing})."
+    log ""
+    log "To upgrade:  install.sh --upgrade [--version VERSION]"
+    exit 0
   fi
 
   local src_root
