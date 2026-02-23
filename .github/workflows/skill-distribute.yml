@@ -1,0 +1,154 @@
+name: Skill Distribute
+on:
+  workflow_run:
+    workflows: ["Skill Publish"]
+    types: [completed]
+
+jobs:
+  load-adopters:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.adopters.outputs.matrix }}
+      tag: ${{ steps.tag.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Get release tag
+        id: tag
+        run: |
+          TAG="${{ github.event.workflow_run.head_branch }}"
+          echo "tag=${TAG}" >> $GITHUB_OUTPUT
+          echo "Release tag: ${TAG}"
+
+      - name: Load enabled adopters
+        id: adopters
+        run: |
+          MATRIX=$(python3 -c "
+          import json
+          with open('pipeline/config/adopters.json') as f:
+              data = json.load(f)
+          enabled = [a for a in data['adopters'] if a.get('enabled', True)]
+          print(json.dumps({'include': enabled}))
+          ")
+          echo "matrix=${MATRIX}" >> $GITHUB_OUTPUT
+          echo "Adopters: ${MATRIX}"
+
+  distribute:
+    needs: load-adopters
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      max-parallel: 2
+      matrix: ${{ fromJson(needs.load-adopters.outputs.matrix) }}
+    steps:
+      - name: Checkout governance repo
+        uses: actions/checkout@v4
+
+      - name: Clone adopter repo
+        env:
+          GH_TOKEN: ${{ secrets.GOVERNANCE_DISTRIBUTION_PAT }}
+        run: |
+          git clone "https://x-access-token:${GH_TOKEN}@github.com/${{ matrix.repo }}.git" adopter-repo
+
+      - name: Check for existing upgrade branch
+        id: check
+        working-directory: adopter-repo
+        run: |
+          TAG="${{ needs.load-adopters.outputs.tag }}"
+          BRANCH="governance/upgrade-${TAG}"
+          if git ls-remote --heads origin "${BRANCH}" | grep -q "${BRANCH}"; then
+            echo "Branch ${BRANCH} already exists — skipping"
+            echo "skip=true" >> $GITHUB_OUTPUT
+          else
+            echo "skip=false" >> $GITHUB_OUTPUT
+          fi
+          echo "branch=${BRANCH}" >> $GITHUB_OUTPUT
+          echo "tag=${TAG}" >> $GITHUB_OUTPUT
+
+      - name: Create upgrade branch
+        if: steps.check.outputs.skip == 'false'
+        working-directory: adopter-repo
+        run: |
+          git checkout -b "${{ steps.check.outputs.branch }}" "origin/${{ matrix.default_branch }}"
+
+      - name: Run upgrade
+        if: steps.check.outputs.skip == 'false'
+        working-directory: adopter-repo
+        run: |
+          bash ../install.sh --upgrade --version "${{ steps.check.outputs.tag }}" --suite-dir .
+
+      - name: Check for changes
+        if: steps.check.outputs.skip == 'false'
+        id: diff
+        working-directory: adopter-repo
+        run: |
+          if git diff --quiet && git diff --cached --quiet; then
+            echo "No changes detected — skipping"
+            echo "has_changes=false" >> $GITHUB_OUTPUT
+          else
+            echo "has_changes=true" >> $GITHUB_OUTPUT
+            echo "diff_stat<<EOF" >> $GITHUB_OUTPUT
+            git diff --stat >> $GITHUB_OUTPUT
+            echo "EOF" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Commit and push
+        if: steps.check.outputs.skip == 'false' && steps.diff.outputs.has_changes == 'true'
+        working-directory: adopter-repo
+        env:
+          GH_TOKEN: ${{ secrets.GOVERNANCE_DISTRIBUTION_PAT }}
+        run: |
+          TAG="${{ steps.check.outputs.tag }}"
+          git config user.name "governance-bot"
+          git config user.email "governance-bot@users.noreply.github.com"
+          git add -A
+          git commit -m "chore(governance): upgrade to ${TAG}"
+          git push origin "${{ steps.check.outputs.branch }}"
+
+      - name: Open pull request
+        if: steps.check.outputs.skip == 'false' && steps.diff.outputs.has_changes == 'true'
+        working-directory: adopter-repo
+        env:
+          GH_TOKEN: ${{ secrets.GOVERNANCE_DISTRIBUTION_PAT }}
+        run: |
+          TAG="${{ steps.check.outputs.tag }}"
+          RELEASE_URL="https://github.com/${{ github.repository }}/releases/tag/${TAG}"
+
+          gh pr create \
+            --title "chore(governance): upgrade to ${TAG}" \
+            --base "${{ matrix.default_branch }}" \
+            --head "${{ steps.check.outputs.branch }}" \
+            --body "$(cat <<EOF
+          ## Governance Upgrade: ${TAG}
+
+          Automated upgrade from [skill-governance ${TAG}](${RELEASE_URL}).
+
+          ### Changes
+          \`\`\`
+          ${{ steps.diff.outputs.diff_stat }}
+          \`\`\`
+
+          ### Release Notes
+          See the [full release notes](${RELEASE_URL}).
+
+          ### Post-Merge Checklist
+          - [ ] Review diff for suite-specific overrides that may need attention
+          - [ ] Run \`pre-commit run --all-files\` after merge
+          - [ ] Verify \`.governance-version\` reads \`${TAG}\`
+          EOF
+          )"
+
+  report:
+    needs: [load-adopters, distribute]
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Summary
+        run: |
+          TAG="${{ needs.load-adopters.outputs.tag }}"
+          echo "## Governance Distribution: ${TAG}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Adopter | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|---------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "See individual job results above for per-repo status." >> $GITHUB_STEP_SUMMARY
