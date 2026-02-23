@@ -70,7 +70,7 @@ download_release() {
   tmpdir=$(mktemp -d)
 
   local tarball_url="${GITHUB_URL}/archive/refs/tags/${version}.tar.gz"
-  log "Downloading ${version} from ${tarball_url}..."
+  log "Downloading ${version} from ${tarball_url}..." >&2
 
   if ! curl -sSL --fail -o "${tmpdir}/release.tar.gz" "$tarball_url"; then
     rm -rf "$tmpdir"
