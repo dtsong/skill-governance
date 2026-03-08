@@ -194,6 +194,12 @@ skill-governance/
 └── install.sh                 # Installer for skill suite repos
 ```
 
+## Platform Compatibility
+
+- Python hooks use `pathlib.Path` and work cross-platform (Windows, macOS, Linux).
+- Shell helper scripts (`*.sh`) require bash — use WSL or Git Bash on Windows.
+- No additional configuration is needed for Windows users running in WSL.
+
 ## Versioning
 
 Follows [semantic versioning](https://semver.org/). Major = breaking changes requiring migration. Minor = new features, backward compatible. Patch = bug fixes and clarifications.
