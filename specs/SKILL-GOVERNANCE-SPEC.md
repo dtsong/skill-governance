@@ -1,4 +1,4 @@
-# Skill Governance Specification v1.3
+# Skill Governance Specification v1.4
 
 ## Overview
 
@@ -24,6 +24,16 @@ and tooling derive their rules from this spec.
 - (v1.2) Model tier annotations replaced with model routing configuration
 - (v1.2) Frontmatter extended with `model` block for per-skill tier preferences
 - (v1.2) Model routing spec referenced for budget-aware degradation
+
+### Changes in v1.4
+
+- Added **Gotchas section** advisory requirement — warn if missing for standalone skills >50 lines (§4.7)
+- Added **Trigger eval minimums** — 5 positive + 3 negative cases for standalone skills (§7.1)
+- Added **Scripts section** guidance — idempotent, `set -e`, checksum integrity, install instructions (§5.6)
+- Added **Assets section** guidance — `.tmpl` extension for templates, no secrets in assets (§5.7)
+- Added **Observability section** — telemetry hooks, 30-day inactive review, usage reporting (§10)
+- Added **Skill categories** from Anthropic best practices: Library/API, Verification, Data Fetching, Business Process, Scaffolding, Code Quality, CI/CD, Runbooks, Infrastructure Ops (§2.6)
+- Relocated governance specs from `skills/soc-security/pipeline/` to repo root `pipeline/`
 
 ### Changes in v1.3
 
@@ -464,6 +474,26 @@ The v1 API used: `api.example.com/v1/messages` — no longer supported.
 The collapsed section provides historical context without cluttering the
 main instructions or confusing the agent about which approach to use.
 
+### 4.7 Gotchas Sections (v1.4)
+
+Standalone skills with >50 lines should include a `## Gotchas` section.
+Gotchas are the **highest-signal content** in a skill — they encode failure
+modes that Claude cannot derive from general knowledge.
+
+**Requirements:**
+- Place before the References or Output Format section
+- 5-8 bullet points covering common mistakes and surprising behaviors
+- Include WRONG/RIGHT code pairs where applicable (see `language-conventions/references/typescript.md` lines 316-347 for the pattern)
+- Focus on failures that are silent, hard to debug, or counterintuitive
+
+**What makes a good gotcha:**
+- A default behavior that causes data loss or silent corruption
+- A version-specific behavior change that breaks existing patterns
+- A tool/command limitation specific to the execution environment (e.g., no TTY in Claude Code)
+- An interaction between two features that produces unexpected results
+
+**Enforcement:** Warn tier — skills without gotchas are flagged but not blocked.
+
 ---
 
 ## 5. Engineering Patterns
@@ -704,6 +734,35 @@ skill execution than any amount of SKILL.md compression. The resilience
 patterns (R1-R3) prevent wasted work from interruptions. Prioritize embedding
 these patterns over squeezing word count.
 
+### 5.7 Helper Scripts Guidance (v1.4)
+
+Skills should store reusable scripts in a `scripts/` subdirectory rather
+than embedding shell commands inline. Claude composes existing scripts;
+it does not need to reconstruct them from scratch each time.
+
+**Requirements for helper scripts:**
+- **Idempotent** — running twice produces the same result
+- **`set -euo pipefail`** — fail on errors, undefined vars, and pipe failures
+- **Checksum integrity** — if `scripts.lock` exists, checksums must match
+- **Install instructions** — check for required tools and print install commands if missing
+- **Clear output** — PASS/FAIL/SKIP prefixes for parseable results
+
+**Enforcement:** Advisory — scripts are encouraged but not required.
+
+### 5.8 Template Assets Guidance (v1.4)
+
+Scaffolding skills (CI/CD, Dockerfile, Helm) should store templates in an
+`assets/` subdirectory. Templates give Claude a starting point to customize
+rather than generating from scratch.
+
+**Requirements for template assets:**
+- **`.tmpl` extension** — distinguishes templates from generated output
+- **No secrets** — templates must not contain API keys, passwords, or credentials
+- **Placeholder format** — use `{{PLACEHOLDER_NAME}}` for values Claude should fill in
+- **Comment header** — first line identifies the template's purpose and source skill
+
+**Enforcement:** Advisory — templates are encouraged for scaffolding skills.
+
 ---
 
 ## 6. Refactoring Patterns
@@ -758,14 +817,23 @@ necessary content — restore it and document the override.
 - [ ] [Nice-to-have assertion]
 ```
 
-### 7.2 Case Selection
+### 7.2 Trigger Eval Minimums (v1.4)
+
+Standalone skills must include trigger eval cases in `eval-cases/trigger-evals.json`:
+- **Minimum 5 positive cases** — natural language inputs that should activate the skill
+- **Minimum 3 negative cases** — inputs that should NOT activate the skill, with `expected_skill: null` and a description noting the correct routing target
+
+Trigger evals validate that the skill's `description` field reliably causes
+activation for intended inputs and does not over-trigger on adjacent domains.
+
+### 7.3 Case Selection
 
 - 5-7 cases per skill
 - Tiered: 1-2 simple, 2-3 medium, 1-2 complex
 - Must collectively cover all key scenarios for the skill's domain
 - Include a "Raw Trace Log" section for traceability
 
-### 7.3 Using Evals to Justify Budgets
+### 7.4 Using Evals to Justify Budgets
 
 Eval results are the arbiter of budget decisions. When a skill exceeds its
 target, the process is:
@@ -778,7 +846,7 @@ target, the process is:
 
 This makes budget decisions empirical rather than arbitrary.
 
-### 7.4 Model-Aware Eval Runs
+### 7.5 Model-Aware Eval Runs
 
 Skills should be tested with all model tiers declared in their `model.acceptable`
 list. What works perfectly for Opus might need more detail for Haiku.
@@ -833,6 +901,8 @@ Every rule in this spec belongs to one of three enforcement tiers:
 | Scripts have explicit error handling | **Warn** | Unhandled errors waste agent tokens on diagnosis |
 | MCP tool references use fully qualified names | **Warn** | Bare tool names cause "tool not found" errors |
 | No temporal references without version context | **Warn** | Creates invisible maintenance debt |
+| Gotchas section present (standalone skills >50 lines) | **Warn** | Missing gotchas omit highest-signal content |
+| Trigger eval cases (≥5 positive + ≥3 negative) | **Warn** | Untested descriptions cause activation failures |
 | Near budget (>90% of target) | **Info** | Awareness that headroom is shrinking |
 | Unknown frontmatter fields | **Info** | Might indicate platform-specific additions |
 | Reference file >100 lines without TOC | **Info** | Large files benefit from navigation aids |
@@ -1008,11 +1078,60 @@ and `npm test 2>&1 | tail -20`. Record the output for subsequent steps.
 
 ---
 
+## 10. Observability (v1.4)
+
+### 10.1 Skill Telemetry
+
+Skills should be measured. A PreToolUse hook logs skill activations to
+`~/.claude/telemetry/skill-usage.jsonl` with timestamp, skill name, project,
+and working directory.
+
+**Setup:** Register `hooks/skill-telemetry.sh` as a PreToolUse hook in `settings.json`.
+
+**Log format:**
+```json
+{"timestamp":"2026-03-17T10:30:00Z","skill":"terraform-skill","project":"infra","cwd":"/path/to/project"}
+```
+
+### 10.2 Usage Reporting
+
+Run `scripts/skill-usage-report.sh` to analyze telemetry data:
+- Top skills by usage count
+- Usage by project
+- Daily activity trends
+- Supports `--days N` and `--project NAME` filters
+
+### 10.3 Inactive Skill Review
+
+Skills with zero invocations over 30 days should be reviewed:
+- Is the description failing to trigger? → Improve description
+- Is the skill's domain no longer relevant? → Archive or remove
+- Is a different skill handling these tasks? → Merge or redirect
+
+### 10.4 Skill Categories
+
+Skills fall into 9 categories (from Anthropic best practices). Use these
+to identify gaps in coverage and guide new skill creation:
+
+| Category | Purpose | Examples |
+|----------|---------|----------|
+| Library/API | External API usage guidance | terraform-skill, dbt-skill |
+| Verification | Testing and validation | tdd, web-security-hardening |
+| Data Fetching | Retrieval from external systems | code-search |
+| Business Process | Workflow and procedures | workflow, ship |
+| Scaffolding | Project and file generation | new-typescript, new-python |
+| Code Quality | Style, patterns, conventions | language-conventions |
+| CI/CD | Pipeline generation and review | cicd-generation |
+| Runbooks | Operational procedures | git-workflows, github-workflow |
+| Infrastructure Ops | Deployment and infrastructure | dockerfile-generation, helm-generation |
+
+---
+
 ## Appendix A: Quick Reference Card
 
 ```
 ┌──────────────────────────────────────────────────────────┐
-│          SKILL GOVERNANCE v1.3 QUICK REFERENCE           │
+│          SKILL GOVERNANCE v1.4 QUICK REFERENCE           │
 ├──────────────────────────────────────────────────────────┤
 │                                                           │
 │  PRIORITY ORDER                                           │
@@ -1066,6 +1185,19 @@ and `npm test 2>&1 | tail -20`. Record the output for subsequent steps.
 │  ✓ Progress checklist for >5 step procedures              │
 │  ✓ Compaction recovery note for multi-turn skills         │
 │  ✓ State checkpoint for destructive operations            │
+│                                                           │
+│  GOTCHAS (warns if missing, v1.4)                         │
+│  ✓ Standalone skills >50 lines should have ## Gotchas     │
+│  ✓ 5-8 bullet points on silent failures, surprises        │
+│  ✓ WRONG/RIGHT code pairs where applicable                │
+│                                                           │
+│  TRIGGER EVALS (required, v1.4)                           │
+│  ✓ Minimum 5 positive + 3 negative cases                  │
+│  ✓ Located in eval-cases/trigger-evals.json               │
+│                                                           │
+│  TELEMETRY (v1.4)                                         │
+│  ✓ PreToolUse hook logs to skill-usage.jsonl              │
+│  ✓ 30-day inactive review cycle                           │
 │                                                           │
 │  SCRIPTS (warns on commit)                                │
 │  ✓ Explicit error handling (no bare exceptions)           │

@@ -5,17 +5,17 @@ set -euo pipefail
 # https://github.com/dtsong/skill-governance
 #
 # Usage:
-#   curl -sSL https://raw.githubusercontent.com/dtsong/skill-governance/v1.3.0/install.sh \
+#   curl -sSL https://raw.githubusercontent.com/dtsong/skill-governance/v1.4.0/install.sh \
 #     | bash -s -- --init
 #
-#   curl -sSL https://raw.githubusercontent.com/dtsong/skill-governance/v1.3.0/install.sh \
-#     | bash -s -- --upgrade --version v1.3.0
+#   curl -sSL https://raw.githubusercontent.com/dtsong/skill-governance/v1.4.0/install.sh \
+#     | bash -s -- --upgrade --version v1.4.0
 #
-#   curl -sSL https://raw.githubusercontent.com/dtsong/skill-governance/v1.3.0/install.sh \
+#   curl -sSL https://raw.githubusercontent.com/dtsong/skill-governance/v1.4.0/install.sh \
 #     | bash -s -- --user-config
 
 REPO="dtsong/skill-governance"
-DEFAULT_VERSION="v1.3.0"
+DEFAULT_VERSION="v1.4.0"
 GITHUB_URL="https://github.com/${REPO}"
 
 # --- Helpers ---
@@ -34,7 +34,7 @@ Usage:
   install.sh --user-config                   Update ~/.claude/CLAUDE.md governance section
 
 Options:
-  --version VERSION    Git tag to install (default: v1.3.0)
+  --version VERSION    Git tag to install (default: v1.4.0)
   --suite-dir DIR      Target suite directory (default: current directory)
   --help               Show this help message
 
