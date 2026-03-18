@@ -15,9 +15,11 @@ except ImportError:
     HAS_YAML = False
 
 REQUIRED_FIELDS = {"name", "description"}
-VALID_OPTIONAL = {"model", "version"}
+VALID_OPTIONAL = {"model", "version", "config", "hooks", "depends_on", "distribution"}
 VALID_MODEL_PREFERRED = {"haiku", "sonnet", "opus"}
 VALID_MODEL_REASONING = {"low", "medium", "high"}
+VALID_DISTRIBUTION = {"repo", "marketplace"}
+VALID_HOOK_EVENTS = {"PreToolUse", "PostToolUse"}
 KEBAB_RE = re.compile(r"^[a-z][a-z0-9]*(-[a-z0-9]+)*$")
 MIN_DESCRIPTION_WORDS = 10
 
@@ -128,6 +130,56 @@ def check_file(filepath, repo_root):
             errors.append(
                 f"{rel_path}: 'model.reasoning_demand' must be one of "
                 f"{sorted(VALID_MODEL_REASONING)} (got '{model['reasoning_demand']}')"
+            )
+
+    # Validate config block if present (Warn tier)
+    if "config" in data and data["config"] is not None:
+        cfg = data["config"]
+        if not isinstance(cfg, dict):
+            warnings.append(f"{rel_path}: 'config' must be a mapping with 'required' and/or 'optional' lists")
+        else:
+            for key in cfg:
+                if key not in ("required", "optional"):
+                    warnings.append(f"{rel_path}: 'config' has unknown key '{key}' (expected 'required' or 'optional')")
+                elif not isinstance(cfg[key], list):
+                    warnings.append(f"{rel_path}: 'config.{key}' must be a list")
+
+    # Validate hooks block if present (Warn tier)
+    if "hooks" in data and data["hooks"] is not None:
+        hooks = data["hooks"]
+        if not isinstance(hooks, list):
+            warnings.append(f"{rel_path}: 'hooks' must be a list of hook definitions")
+        else:
+            for i, hook in enumerate(hooks):
+                if not isinstance(hook, dict):
+                    warnings.append(f"{rel_path}: 'hooks[{i}]' must be a mapping")
+                else:
+                    for req_key in ("event", "matcher", "script"):
+                        if req_key not in hook:
+                            warnings.append(f"{rel_path}: 'hooks[{i}]' missing required key '{req_key}'")
+                    if "event" in hook and hook["event"] not in VALID_HOOK_EVENTS:
+                        warnings.append(
+                            f"{rel_path}: 'hooks[{i}].event' must be one of "
+                            f"{sorted(VALID_HOOK_EVENTS)} (got '{hook['event']}')"
+                        )
+
+    # Validate depends_on if present (Info tier)
+    if "depends_on" in data and data["depends_on"] is not None:
+        deps = data["depends_on"]
+        if not isinstance(deps, list):
+            warnings.append(f"{rel_path}: 'depends_on' must be a list of kebab-case skill names")
+        else:
+            for dep in deps:
+                if not isinstance(dep, str) or not KEBAB_RE.match(dep):
+                    warnings.append(f"{rel_path}: 'depends_on' entry '{dep}' must be kebab-case")
+
+    # Validate distribution if present (Info tier)
+    if "distribution" in data and data["distribution"] is not None:
+        dist = str(data["distribution"])
+        if dist not in VALID_DISTRIBUTION:
+            warnings.append(
+                f"{rel_path}: 'distribution' must be one of "
+                f"{sorted(VALID_DISTRIBUTION)} (got '{dist}')"
             )
 
     # Warn on unknown top-level fields

@@ -5,6 +5,29 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [v1.5.0] - 2026-03-18
+
+### Added
+- **Cross-Skill Composition** (§2.6) — skills may reference other skills by name; runtime-resolved, not context-loaded. Optional `depends_on` frontmatter field.
+- **Setup & Configuration** (§5.9) — `config.json` pattern for user-specific settings with `config` frontmatter block for declaring expected keys.
+- **Data Persistence** (§5.10) — guidance on `${CLAUDE_PLUGIN_DATA}` for durable cross-session storage, acceptable formats, and self-prune advisory.
+- **Session Hooks** (§9.6) — skills can register session-scoped PreToolUse/PostToolUse hooks via frontmatter `hooks` block.
+- **Distribution & Marketplace Lifecycle** (§11) — two distribution paths (repo-checked vs marketplace), lifecycle stages (draft → sandbox → published → promoted), curation criteria.
+- New optional frontmatter fields: `config`, `hooks`, `depends_on`, `distribution`.
+- Frontmatter validation for new fields in `check_frontmatter.py`.
+- Shell helpers: `skill-init-config` and `skill-validate-config`.
+- `config.json.example` template for standalone skills.
+- `config.json` validation in `validate-structure.sh`.
+- `config.json.example` included in `package-skill.sh` output.
+
+### Changed
+- **Conciseness hierarchy** (§4.1) — strengthened with "focus on information that pushes Claude OUT of its default behavior" principle.
+- **Helper Scripts** (§5.7) — expanded with composable script library guidance (`scripts/lib/`).
+- **Observability** (§10) — added undertrigger detection, `trigger_source` telemetry field, undertrigger analysis in 30-day review.
+- **Isolation hook** (`check_isolation.py`) — tightened `alt_patterns` to path-specific matches, allowing name-only composition references.
+- Enforcement tier mapping (§8.2) updated with rules for `config`, `hooks`, `depends_on`, `distribution`, and persistent data.
+- Quick Reference Card updated with composition, config, hooks, and persistence sections.
+
 ## [v1.3.0] - 2025-02-15
 
 ### Added
@@ -67,6 +90,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Cross-platform compatibility rules for Claude Code and OpenAI Codex.
 - Commit message convention for skill-related changes.
 
+[v1.5.0]: https://github.com/dtsong/skill-governance/compare/v1.4.0...v1.5.0
 [v1.3.0]: https://github.com/dtsong/skill-governance/compare/v1.2.0...v1.3.0
 [v1.2.0]: https://github.com/dtsong/skill-governance/compare/v1.1.1...v1.2.0
 [v1.1.1]: https://github.com/dtsong/skill-governance/compare/v1.1.0...v1.1.1

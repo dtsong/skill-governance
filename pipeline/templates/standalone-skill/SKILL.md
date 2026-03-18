@@ -10,6 +10,13 @@ description: >
 - `required_input`: DESCRIPTION
 - `optional_input` (optional): DESCRIPTION
 
+<!-- Optional: uncomment if the skill requires user-specific settings.
+## Configuration
+On first invocation, if `config.json` is missing, prompt the user for:
+- `setting_name`: DESCRIPTION
+Store in `config.json` (gitignored). No secrets — use environment variables.
+-->
+
 ## Procedure
 
 Step 1: Gather context.
@@ -34,6 +41,16 @@ Step 3: Verify output.
   "details": []
 }
 ```
+
+<!-- Optional: uncomment if the skill registers session hooks.
+## Session Hooks
+hooks:
+  - event: PreToolUse
+    matcher: "ToolName"
+    script: scripts/guard.sh
+Hooks activate on skill invocation and persist for the session.
+Platform-specific (Claude Code). For cross-platform, note as optional.
+-->
 
 ## References
 | File | Load When | Contains |

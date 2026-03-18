@@ -75,6 +75,20 @@ for skill_dir in "$REPO_ROOT"/*-skill/; do
   fi
 done
 
+# 4. If config.json exists, verify it's valid JSON
+for skill_dir in "$REPO_ROOT"/*-skill/; do
+  [ -d "$skill_dir" ] || continue
+  skill_name="$(basename "$skill_dir")"
+
+  if [ -f "$skill_dir/config.json" ]; then
+    if python3 -c "import json; json.load(open('$skill_dir/config.json'))" 2>/dev/null; then
+      log_ok "$skill_name/config.json is valid JSON"
+    else
+      log_error "$skill_name/config.json is not valid JSON"
+    fi
+  fi
+done
+
 echo ""
 echo "=== Summary ==="
 

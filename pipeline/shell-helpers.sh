@@ -131,3 +131,43 @@ skill-load() {
     fi
     python3 pipeline/hooks/check_context_load.py $files
 }
+
+# Copy config.json.example to a skill directory
+skill-init-config() {
+    local skill_dir="$1"
+    if [ -z "$skill_dir" ]; then
+        echo "Usage: skill-init-config <skill-directory>" >&2
+        return 1
+    fi
+    if [ ! -d "$skill_dir" ]; then
+        echo "Error: $skill_dir does not exist" >&2
+        return 1
+    fi
+    local template="pipeline/templates/standalone-skill/config.json.example"
+    if [ ! -f "$template" ]; then
+        echo "Error: template not found at $template" >&2
+        return 1
+    fi
+    cp "$template" "$skill_dir/config.json.example"
+    echo "Copied config.json.example to $skill_dir/"
+    echo "Next: edit $skill_dir/config.json.example, then rename to config.json"
+}
+
+# Validate that config.json is valid JSON
+skill-validate-config() {
+    local config="$1"
+    if [ -z "$config" ]; then
+        echo "Usage: skill-validate-config <path/to/config.json>" >&2
+        return 1
+    fi
+    if [ ! -f "$config" ]; then
+        echo "Error: $config not found" >&2
+        return 1
+    fi
+    if python3 -c "import json; json.load(open('$config'))" 2>/dev/null; then
+        echo "OK: $config is valid JSON"
+    else
+        echo "FAIL: $config is not valid JSON" >&2
+        return 1
+    fi
+}

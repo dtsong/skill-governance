@@ -59,6 +59,11 @@ if [ -d "$SKILL_DIR/skills" ]; then
   INCLUDE_PATHS="$INCLUDE_PATHS $SKILL_NAME/skills"
 fi
 
+# Include config.json.example if exists (not config.json — that's user-specific)
+if [ -f "$SKILL_DIR/config.json.example" ]; then
+  INCLUDE_PATHS="$INCLUDE_PATHS $SKILL_NAME/config.json.example"
+fi
+
 # Extract version from frontmatter if available
 VERSION="0.0.0"
 if grep -q '^version:' "$SKILL_DIR/SKILL.md" 2>/dev/null; then

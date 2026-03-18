@@ -1,4 +1,4 @@
-# Skill Governance Specification v1.4
+# Skill Governance Specification v1.5
 
 ## Overview
 
@@ -24,6 +24,19 @@ and tooling derive their rules from this spec.
 - (v1.2) Model tier annotations replaced with model routing configuration
 - (v1.2) Frontmatter extended with `model` block for per-skill tier preferences
 - (v1.2) Model routing spec referenced for budget-aware degradation
+
+### Changes in v1.5
+
+- Added **Cross-Skill Composition** — skills may reference other skills by name, runtime-resolved (§2.6)
+- Added **Setup & Configuration** pattern — `config.json` for user-specific settings (§5.9)
+- Added **Data Persistence** guidance — `${CLAUDE_PLUGIN_DATA}` for durable cross-session storage (§5.10)
+- Added **Session Hooks** — session-scoped PreToolUse/PostToolUse hooks via frontmatter (§9.6)
+- Added **Distribution & Marketplace Lifecycle** — repo-checked vs marketplace paths (§11)
+- Added new optional frontmatter fields: `config`, `hooks`, `depends_on`, `distribution`
+- Strengthened **Conciseness** with "pushes Claude out of default behavior" principle (§4.1)
+- Expanded **Helper Scripts** with composable script library guidance (`scripts/lib/`) (§5.7)
+- Strengthened **Observability** with undertrigger detection and `trigger_source` field (§10)
+- Updated enforcement tier mapping with new validation rules (§8.2)
 
 ### Changes in v1.4
 
@@ -202,6 +215,40 @@ must include a table of contents at the top. This ensures the agent can see
 the full scope of available content even when previewing, and can navigate
 directly to the relevant section.
 
+### 2.6 Cross-Skill Composition (v1.5)
+
+Skills may reference other installed skills by name in their procedures.
+This is distinct from cross-specialist isolation (§2.5), which blocks
+file path references between siblings within a suite.
+
+**Rules:**
+- References are **runtime-resolved** — the agent invokes the referenced
+  skill through normal activation, not by reading its files into context
+- If the referenced skill is not installed, the referencing skill must
+  **degrade gracefully** (skip the step, use a fallback, or note the gap)
+- Use the optional `depends_on` frontmatter field to declare composition
+  dependencies (list of kebab-case skill names)
+- Composition references are **name-only** — never reference another
+  skill's file paths (e.g., `skills/other-skill/SKILL.md`)
+
+```yaml
+depends_on: [code-search, git-workflows]
+```
+
+```markdown
+Step 3: Search for related implementations.
+  Use the code-search skill to find similar patterns.
+  If code-search is not available, use Grep directly.
+```
+
+**What's allowed vs blocked:**
+
+| Reference Type | Example | Allowed? |
+|---------------|---------|----------|
+| Name-only composition | "Use the code-search skill" | Yes |
+| Sibling file path | `../code-search/SKILL.md` | No (isolation) |
+| Suite path reference | `skills/code-search/SKILL.md` | No (isolation) |
+
 ---
 
 ## 3. File Format Standards
@@ -250,6 +297,19 @@ model:
 
 See `SKILL-MODEL-ROUTING-SPEC.md` for the full model configuration schema,
 budget-aware routing, and degradation cascade.
+
+Additional optional fields (v1.5):
+```yaml
+config:
+  required: [api_endpoint]          # Keys the skill needs to function
+  optional: [output_format]         # Keys with sensible defaults
+depends_on: [skill-name]            # Composition dependencies (§2.6)
+distribution: repo                  # repo | marketplace (§11)
+hooks:                              # Session-scoped hooks (§9.6)
+  - event: PreToolUse
+    matcher: "Bash"
+    script: scripts/guard.sh
+```
 
 No other frontmatter fields are permitted.
 
@@ -310,6 +370,22 @@ where validation is needed (§5.4).]
 ## 4. Writing Rules
 
 ### 4.1 The Conciseness Hierarchy
+
+**Focus on information that pushes Claude OUT of its default behavior.**
+The fundamental test for any skill content: "Does this change what Claude
+would do without the skill?" If Claude would already do the right thing,
+the instruction is wasting tokens. If the instruction redirects Claude
+toward a project-specific approach it wouldn't discover on its own, it
+earns its place.
+
+```
+❌ "Always write clean, readable code" → Claude already does this
+❌ "Handle errors appropriately" → Claude already does this
+✅ "Use Result<T, AppError> instead of throwing — this codebase treats
+    exceptions as bugs, not control flow" → changes default behavior
+✅ "Run db:migrate before db:seed — seed data depends on the migration
+    adding the status column" → project-specific ordering Claude can't infer
+```
 
 Apply these tests in order when reviewing skill content:
 
@@ -749,6 +825,25 @@ it does not need to reconstruct them from scratch each time.
 
 **Enforcement:** Advisory — scripts are encouraged but not required.
 
+**Composable script libraries (v1.5):**
+
+For skills that share utility functions across multiple scripts, use a
+`scripts/lib/` directory for reusable functions that Claude composes
+at runtime. These are sourced/imported, not executed directly.
+
+```
+scripts/
+├── lint.sh                  # Executable — runs directly
+├── test.sh                  # Executable — runs directly
+└── lib/
+    ├── assertions.sh        # Sourced by lint.sh and test.sh
+    └── formatting.sh        # Sourced by scripts needing output formatting
+```
+
+- `scripts.lock` checksums must cover `lib/` files too
+- Lib files should use functions (not top-level side effects) for safe sourcing
+- Document which scripts source which lib files in a comment header
+
 ### 5.8 Template Assets Guidance (v1.4)
 
 Scaffolding skills (CI/CD, Dockerfile, Helm) should store templates in an
@@ -762,6 +857,55 @@ rather than generating from scratch.
 - **Comment header** — first line identifies the template's purpose and source skill
 
 **Enforcement:** Advisory — templates are encouraged for scaffolding skills.
+
+### 5.9 Setup & Configuration (v1.5)
+
+Skills requiring user-specific context store setup in a `config.json` file
+within the skill directory.
+
+**Lifecycle:**
+1. Skill ships with `config.json.example` showing expected keys
+2. On first invocation, if `config.json` is missing or incomplete, prompt
+   the user via AskUserQuestion for required values
+3. Write responses to `config.json` and continue execution
+4. On subsequent invocations, read `config.json` silently
+
+**Rules:**
+- `config.json` is **gitignored by default** — it contains user-specific
+  values and must not be committed
+- **No secrets in config.json** — API keys, tokens, and passwords must use
+  environment variables. The `config` block can reference env var names:
+  `"api_key_env": "SKILL_API_KEY"`
+- Declare expected keys in the optional `config` frontmatter block:
+  ```yaml
+  config:
+    required: [api_endpoint, project_id]
+    optional: [output_format, verbose]
+  ```
+- Validate config on load — if a required key is missing, prompt the user
+  rather than failing silently
+
+**Enforcement:** `config` block schema valid → Warn. `config.json` free of
+secrets → Hard (checked by security hook).
+
+### 5.10 Data Persistence (v1.5)
+
+Skills that need durable cross-session storage should use
+`${CLAUDE_PLUGIN_DATA}` (resolves to a platform-managed directory).
+
+**Rules:**
+- Data stored in the skill directory itself may be **deleted on upgrade** —
+  do not rely on it for persistence
+- Acceptable formats:
+  - **JSONL** — append-only logs, telemetry, history
+  - **JSON** — structured state, configuration snapshots
+  - **SQLite** — queryable datasets, indexed lookups
+- **Self-prune advisory:** recommend max 10MB per skill. Skills exceeding
+  this should implement automatic pruning (oldest entries, LRU, or TTL)
+- If writing structured data, document the schema in a
+  `DATA-SCHEMA.md` reference file within the skill directory
+
+**Enforcement:** Persistent data uses `${CLAUDE_PLUGIN_DATA}` → Info.
 
 ---
 
@@ -903,6 +1047,12 @@ Every rule in this spec belongs to one of three enforcement tiers:
 | No temporal references without version context | **Warn** | Creates invisible maintenance debt |
 | Gotchas section present (standalone skills >50 lines) | **Warn** | Missing gotchas omit highest-signal content |
 | Trigger eval cases (≥5 positive + ≥3 negative) | **Warn** | Untested descriptions cause activation failures |
+| `config` block schema valid | **Warn** | Malformed config blocks cause silent setup failures |
+| `config.json` free of secrets | **Hard** | Prevents credential exposure in config files |
+| `hooks` block schema valid | **Warn** | Malformed hook definitions won't register |
+| `depends_on` is list of kebab-case | **Info** | Consistency with naming conventions |
+| `distribution` is valid enum | **Info** | Prevents typos in distribution field |
+| Persistent data uses `${CLAUDE_PLUGIN_DATA}` | **Info** | Data in skill directory lost on upgrade |
 | Near budget (>90% of target) | **Info** | Awareness that headroom is shrinking |
 | Unknown frontmatter fields | **Info** | Might indicate platform-specific additions |
 | Reference file >100 lines without TOC | **Info** | Large files benefit from navigation aids |
@@ -1076,6 +1226,46 @@ Step 0 (if shell preprocessing unavailable): Run `git diff --cached --stat`
 and `npm test 2>&1 | tail -20`. Record the output for subsequent steps.
 ```
 
+### 9.6 Session Hooks (v1.5)
+
+Skills can register session-scoped hooks that activate on skill invocation
+and persist for the remainder of the session. Hooks intercept tool calls
+before or after execution, enabling guardrails, logging, and validation.
+
+**Hook events:**
+- `PreToolUse` — runs before a tool call executes; can block the call
+- `PostToolUse` — runs after a tool call completes; can inspect results
+
+**Declaration:** Either in frontmatter or in a `## Session Hooks` section:
+
+```yaml
+hooks:
+  - event: PreToolUse
+    matcher: "Bash"
+    script: scripts/guard.sh
+  - event: PostToolUse
+    matcher: "Write"
+    script: scripts/validate-output.sh
+```
+
+**Requirements:**
+- Hook scripts must be **idempotent** — running the same hook twice on
+  the same input produces the same result
+- Hook scripts must **not silently swallow errors** — if a hook fails,
+  it must report the failure clearly (exit code + stderr message)
+- Hook scripts follow the same robustness requirements as helper scripts (§5.7)
+
+**Platform note:** Session hooks are a Claude Code feature. Cross-platform
+skills should declare hooks as an **optional enhancement** — the skill must
+function correctly without them. Note this in the skill's procedure:
+
+```markdown
+Note: This skill registers a PreToolUse hook for Bash commands when
+running in Claude Code. On other platforms, the guardrail is advisory.
+```
+
+**Enforcement:** `hooks` block schema valid → Warn.
+
 ---
 
 ## 10. Observability (v1.4)
@@ -1090,8 +1280,12 @@ and working directory.
 
 **Log format:**
 ```json
-{"timestamp":"2026-03-17T10:30:00Z","skill":"terraform-skill","project":"infra","cwd":"/path/to/project"}
+{"timestamp":"2026-03-17T10:30:00Z","skill":"terraform-skill","project":"infra","cwd":"/path/to/project","trigger_source":"implicit"}
 ```
+
+The `trigger_source` field (v1.5) distinguishes between:
+- `implicit` — skill activated automatically by description matching
+- `explicit` — skill invoked via slash command or direct reference
 
 ### 10.2 Usage Reporting
 
@@ -1107,6 +1301,17 @@ Skills with zero invocations over 30 days should be reviewed:
 - Is the description failing to trigger? → Improve description
 - Is the skill's domain no longer relevant? → Archive or remove
 - Is a different skill handling these tasks? → Merge or redirect
+
+**Undertrigger detection (v1.5):** Compare expected activation rate (from
+trigger evals) against actual telemetry. A skill with 10 positive trigger
+eval cases but <5% implicit activation rate over 30 days is likely
+undertriggering. Diagnosis steps:
+1. Review `trigger_source` distribution — if mostly `explicit`, the
+   description isn't matching natural user requests
+2. Run trigger evals against current description to verify they still pass
+3. Check for vocabulary overlap with other skills that may be capturing
+   the intended triggers
+4. Revise description using the trigger reliability spec formula
 
 ### 10.4 Skill Categories
 
@@ -1127,11 +1332,53 @@ to identify gaps in coverage and guide new skill creation:
 
 ---
 
+## 11. Distribution & Marketplace Lifecycle (v1.5)
+
+Skills can be distributed through two paths:
+
+### 11.1 Repo-Checked Distribution
+
+Skills placed in `.claude/skills/` within a repository:
+- **Immediately available** to all contributors working in the repo
+- **Version-controlled** with the codebase — changes go through PR review
+- Adds to context for every session in the repo
+- Best for: team-specific workflows, project conventions, internal tools
+
+### 11.2 Marketplace Distribution
+
+Skills published to the plugin marketplace:
+- **Discoverable** by all users via search and recommendations
+- **Installed per-user** — each user opts in to the skills they want
+- Updates managed through the marketplace (not git)
+- Best for: general-purpose skills, community contributions, cross-org tools
+
+### 11.3 Lifecycle Stages
+
+| Stage | Description | Requirements |
+|-------|-------------|--------------|
+| **Draft** | Local development, not shared | SKILL.md exists, frontmatter valid |
+| **Sandbox** | Testing with limited users | Passing eval cases, security scan clean |
+| **Published** | Available in marketplace | Trigger evals present (§7.2), passing evals, security clean |
+| **Promoted** | Curated / featured | Sustained usage, positive feedback, active maintenance |
+
+### 11.4 Curation Criteria
+
+For a skill to move from Published to Promoted:
+- Trigger evals pass with ≥90% activation rate
+- Security scan produces zero Hard-tier findings
+- At least one complete usage cycle (30+ days of telemetry)
+- Active maintainer responding to issues within 14 days
+
+**Optional `distribution` frontmatter field:** Declare `repo` or `marketplace`
+to signal the intended distribution path. Defaults to `repo` if not specified.
+
+---
+
 ## Appendix A: Quick Reference Card
 
 ```
 ┌──────────────────────────────────────────────────────────┐
-│          SKILL GOVERNANCE v1.4 QUICK REFERENCE           │
+│          SKILL GOVERNANCE v1.5 QUICK REFERENCE           │
 ├──────────────────────────────────────────────────────────┤
 │                                                           │
 │  PRIORITY ORDER                                           │
@@ -1195,9 +1442,37 @@ to identify gaps in coverage and guide new skill creation:
 │  ✓ Minimum 5 positive + 3 negative cases                  │
 │  ✓ Located in eval-cases/trigger-evals.json               │
 │                                                           │
-│  TELEMETRY (v1.4)                                         │
+│  TELEMETRY (v1.4+)                                        │
 │  ✓ PreToolUse hook logs to skill-usage.jsonl              │
 │  ✓ 30-day inactive review cycle                           │
+│  ✓ trigger_source field (implicit/explicit) (v1.5)        │
+│  ✓ Undertrigger detection via eval-vs-actual rates        │
+│                                                           │
+│  COMPOSITION (v1.5)                                       │
+│  ✓ Reference skills by name (runtime-resolved)            │
+│  ✓ depends_on frontmatter for dependencies                │
+│  ✓ Degrade gracefully if dependency not installed          │
+│  ✓ Name-only — no file path cross-references              │
+│                                                           │
+│  CONFIGURATION (v1.5)                                     │
+│  ✓ config.json for user-specific settings (gitignored)    │
+│  ✓ config.json.example ships with skill                   │
+│  ✓ No secrets — use environment variables                 │
+│  ✓ Prompt user on first invocation if missing              │
+│                                                           │
+│  SESSION HOOKS (v1.5)                                     │
+│  ✓ PreToolUse / PostToolUse via frontmatter               │
+│  ✓ Idempotent, no silent error swallowing                 │
+│  ✓ Claude Code specific — optional for cross-platform     │
+│                                                           │
+│  PERSISTENCE (v1.5)                                       │
+│  ✓ Use ${CLAUDE_PLUGIN_DATA} for durable storage          │
+│  ✓ JSONL / JSON / SQLite formats                          │
+│  ✓ Max 10MB per skill (self-prune advisory)               │
+│                                                           │
+│  DISTRIBUTION (v1.5)                                      │
+│  ✓ Repo-checked (.claude/skills/) or marketplace          │
+│  ✓ Lifecycle: draft → sandbox → published → promoted      │
 │                                                           │
 │  SCRIPTS (warns on commit)                                │
 │  ✓ Explicit error handling (no bare exceptions)           │

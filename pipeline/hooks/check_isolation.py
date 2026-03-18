@@ -78,10 +78,13 @@ def check_file(filepath, repo_root):
                 r"\.\./?" + re.escape(sibling) + r"(/|\.md|/SKILL\.md|/references/)"
             )
             # Also match skills/sibling-name references
+            # File path references are blocked (isolation rule).
+            # Name-only composition references are allowed (§2.6).
             alt_patterns = [
                 f"{sibling}/SKILL.md",
                 f"{sibling}/references/",
-                f"skills/{sibling}",
+                f"skills/{sibling}/",
+                f"skills/{sibling}/SKILL.md",
             ]
             if pattern.search(line):
                 errors.append(

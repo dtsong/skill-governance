@@ -1,0 +1,4 @@
+{
+  "example_setting": "replace-with-your-value",
+  "_comment": "Rename to config.json. Do not commit secrets."
+}

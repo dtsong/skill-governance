@@ -23,6 +23,8 @@ One-sentence description of what this skill suite does.
 ## Load Directive
 Read ONLY the relevant specialist SKILL.md based on classification above. Do not pre-load multiple specialists.
 
+**Cross-skill composition:** Skills may reference other installed skills by name in procedures. These references are runtime-resolved (not context-loaded) and degrade gracefully if the referenced skill is not installed. This is distinct from the cross-specialist isolation rule (§2.5), which blocks file path references between siblings.
+
 ## Handoff Protocol
 Pass between skills as structured JSON:
 ```json
