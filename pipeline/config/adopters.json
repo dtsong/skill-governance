@@ -4,6 +4,7 @@
     { "repo": "dtsong/data-engineering-skills", "default_branch": "main", "enabled": true },
     { "repo": "dtsong/frontend-qa-skills", "default_branch": "main", "enabled": true },
     { "repo": "dtsong/paperbanana-skills", "default_branch": "main", "enabled": true },
-    { "repo": "dtsong/soc-security-skills", "default_branch": "main", "enabled": true }
+    { "repo": "dtsong/soc-security-skills", "default_branch": "main", "enabled": true },
+    { "repo": "dtsong/claude-cpa", "default_branch": "main", "enabled": true }
   ]
 }
