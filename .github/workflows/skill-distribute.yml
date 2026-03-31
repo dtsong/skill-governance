@@ -12,7 +12,7 @@ jobs:
       matrix: ${{ steps.adopters.outputs.matrix }}
       tag: ${{ steps.tag.outputs.tag }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: Get release tag
         id: tag
@@ -43,7 +43,7 @@ jobs:
       matrix: ${{ fromJson(needs.load-adopters.outputs.matrix) }}
     steps:
       - name: Checkout governance repo
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
 
       - name: Clone adopter repo
         env:
