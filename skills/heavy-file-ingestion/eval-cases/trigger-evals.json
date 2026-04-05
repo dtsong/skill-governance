@@ -1,0 +1,60 @@
+{
+  "skill": "heavy-file-ingestion",
+  "version": "1.0.0",
+  "cases": [
+    {
+      "id": "positive-pdf-read",
+      "input": "Can you read through this PDF and summarize the key findings?",
+      "expected_skill": "heavy-file-ingestion",
+      "description": "Direct request to read a PDF — core trigger"
+    },
+    {
+      "id": "positive-spreadsheet-analyze",
+      "input": "Look through this spreadsheet and tell me which products had the highest revenue",
+      "expected_skill": "heavy-file-ingestion",
+      "description": "Spreadsheet analysis request — should convert XLSX to CSV first"
+    },
+    {
+      "id": "positive-deck-summarize",
+      "input": "Summarize this slide deck for me, I need the key points from each section",
+      "expected_skill": "heavy-file-ingestion",
+      "description": "Presentation summarization — should extract slide outline"
+    },
+    {
+      "id": "positive-docx-extract",
+      "input": "Extract the requirements from this Word document and list them",
+      "expected_skill": "heavy-file-ingestion",
+      "description": "DOCX extraction request — convert to markdown first"
+    },
+    {
+      "id": "positive-large-csv",
+      "input": "I have a 50MB CSV export from our database, can you analyze the trends?",
+      "expected_skill": "heavy-file-ingestion",
+      "description": "Large CSV — too big for raw ingestion, should normalize first"
+    },
+    {
+      "id": "positive-implicit-pdf",
+      "input": "What does the Q3 report say about our margins? Here's the file: /docs/q3-report.pdf",
+      "expected_skill": "heavy-file-ingestion",
+      "description": "Implicit PDF reference via file path — should still trigger conversion"
+    },
+    {
+      "id": "negative-source-code",
+      "input": "Read through src/utils/parser.ts and explain what it does",
+      "expected_skill": null,
+      "description": "TypeScript source code — cheap to read directly, no conversion needed. Route to general code reading."
+    },
+    {
+      "id": "negative-json-config",
+      "input": "Check the package.json and tell me what dependencies we have",
+      "expected_skill": null,
+      "description": "JSON file — plain text, no conversion needed. Route to general file reading."
+    },
+    {
+      "id": "negative-markdown-readme",
+      "input": "What does the README say about installation?",
+      "expected_skill": null,
+      "description": "Markdown file — already lightweight, read directly. Route to general file reading."
+    }
+  ]
+}
