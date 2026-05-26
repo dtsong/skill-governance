@@ -108,10 +108,17 @@ def extract_frontmatter(text):
 
     try:
         import yaml
-        data = yaml.safe_load(yaml_text)
-        return data if isinstance(data, dict) else {}
     except ImportError:
-        pass
+        yaml = None
+    if yaml is not None:
+        try:
+            data = yaml.safe_load(yaml_text)
+            return data if isinstance(data, dict) else {}
+        except yaml.YAMLError as e:
+            # One malformed SKILL.md must not abort the whole scan — warn and
+            # fall through to the tolerant line-based parser below.
+            print(f"WARNING: malformed YAML frontmatter ({e}); using fallback parser",
+                  file=sys.stderr)
 
     # Fallback: handle simple `key: value` and folded `key: >` descriptions.
     data = {}
@@ -258,14 +265,19 @@ def analyze_overlap(skills, threshold):
 
 
 def load_telemetry_skills(telemetry_file, days):
-    """Return (set_of_skill_names, status) seen within `days`. status describes availability."""
+    """Return (set_of_skill_names, status, diagnostics) for usage within `days`.
+
+    status is a STABLE machine code — "unavailable", "empty", "ok", or
+    "error: ...". Counts of skipped/degraded entries live in diagnostics so the
+    status string stays comparable by the caller; the report discloses them.
+    """
+    diag = {"malformed_ts": 0, "bad_json": 0}
     if not os.path.isfile(telemetry_file):
-        return set(), "unavailable"
+        return set(), "unavailable", diag
 
     cutoff = datetime.now(timezone.utc) - timedelta(days=days)
     seen = set()
     parsed_any = False
-    malformed_ts = 0
     try:
         with open(telemetry_file, "r", encoding="utf-8") as f:
             for line in f:
@@ -275,6 +287,9 @@ def load_telemetry_skills(telemetry_file, days):
                 try:
                     entry = json.loads(line)
                 except json.JSONDecodeError:
+                    # A corrupt line may omit a real invocation, risking a false
+                    # "unused" flag — track it so the report can disclose it.
+                    diag["bad_json"] += 1
                     continue
                 parsed_any = True
                 skill = entry.get("skill")
@@ -292,16 +307,12 @@ def load_telemetry_skills(telemetry_file, days):
                         # Present-but-unparseable timestamp: count the skill as
                         # seen (conservative — avoids a false "unused" flag) but
                         # track it so the report can disclose the bypassed window.
-                        malformed_ts += 1
+                        diag["malformed_ts"] += 1
                 seen.add(skill)
     except OSError as e:
-        return set(), f"error reading telemetry: {e}"
+        return set(), f"error: reading telemetry: {e}", diag
 
-    if not parsed_any:
-        return seen, "empty"
-    if malformed_ts:
-        return seen, f"ok ({malformed_ts} entries had unparseable timestamps, counted as in-window)"
-    return seen, "ok"
+    return seen, ("ok" if parsed_any else "empty"), diag
 
 
 # ---------------------------------------------------------------------------
@@ -329,8 +340,9 @@ def build_results(repo_root, cfg, days, context_window, telemetry_file, use_tele
 
     unused = []
     telemetry_status = "skipped"
+    telemetry_diag = {"malformed_ts": 0, "bad_json": 0}
     if use_telemetry:
-        seen, telemetry_status = load_telemetry_skills(telemetry_file, days)
+        seen, telemetry_status, telemetry_diag = load_telemetry_skills(telemetry_file, days)
         if telemetry_status in ("ok", "empty"):
             for rel, r in sorted(skills.items()):
                 if r["name"] in seen:
@@ -354,6 +366,7 @@ def build_results(repo_root, cfg, days, context_window, telemetry_file, use_tele
         "overlap_candidates": overlap,
         "unused_skills": unused,
         "telemetry_status": telemetry_status,
+        "telemetry_diagnostics": telemetry_diag,
         "telemetry_window_days": days,
         "verbose_threshold_words": cfg["verbose_description_words"],
         "overlap_threshold": cfg["overlap_threshold"],
@@ -409,6 +422,16 @@ def render_text(res):
         out += [f"  - {u['rel_dir']} ({u['name']})" for u in res["unused_skills"]]
     else:
         out.append("  None — every inventoried skill was invoked in the window.")
+
+    diag = res.get("telemetry_diagnostics", {})
+    notes = []
+    if diag.get("malformed_ts"):
+        notes.append(f"{diag['malformed_ts']} entries had unparseable timestamps "
+                     "(counted as in-window)")
+    if diag.get("bad_json"):
+        notes.append(f"{diag['bad_json']} corrupt JSON lines were skipped")
+    if notes:
+        out.append(f"  Note: {'; '.join(notes)} — results may understate usage.")
     out.append("")
 
     if res["preserve"]:
