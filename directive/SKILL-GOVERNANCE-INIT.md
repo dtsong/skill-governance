@@ -286,14 +286,14 @@ repos:
     hooks:
       - id: skill-security
         name: Skill Security Scan
-        entry: python3 pipeline/hooks/check_security.py
+        entry: python pipeline/hooks/check_security.py
         language: python
         files: '(SKILL\.md|references/.*\.md|scripts/.*)$'
         exclude: '(eval-cases|templates|node_modules)/'
 
       - id: skill-frontmatter
         name: Skill Frontmatter
-        entry: python3 pipeline/hooks/check_frontmatter.py
+        entry: python pipeline/hooks/check_frontmatter.py
         language: python
         files: 'SKILL\.md$'
         exclude: '(eval-cases|templates|node_modules)/'
@@ -301,28 +301,28 @@ repos:
 
       - id: skill-references
         name: Skill Reference Integrity
-        entry: python3 pipeline/hooks/check_references.py
+        entry: python pipeline/hooks/check_references.py
         language: python
         files: '(SKILL\.md|references/.*\.md)$'
         exclude: '(eval-cases|templates)/'
 
       - id: skill-isolation
         name: Skill Isolation
-        entry: python3 pipeline/hooks/check_isolation.py
+        entry: python pipeline/hooks/check_isolation.py
         language: python
         files: 'SKILL\.md$'
         exclude: '(eval-cases|templates)/'
 
       - id: skill-context-load
         name: Suite Context Load
-        entry: python3 pipeline/hooks/check_context_load.py
+        entry: python pipeline/hooks/check_context_load.py
         language: python
         files: '(SKILL\.md|references/.*\.md)$'
         exclude: '(eval-cases|templates)/'
 
       - id: skill-triggers
         name: Skill Trigger Quality
-        entry: python3 pipeline/hooks/check_triggers.py
+        entry: python pipeline/hooks/check_triggers.py
         language: python
         files: 'SKILL\.md$'
         exclude: '(eval-cases|templates)/'
@@ -330,7 +330,7 @@ repos:
 
       - id: skill-token-budget
         name: Skill Token Budget
-        entry: python3 pipeline/hooks/check_token_budget.py
+        entry: python pipeline/hooks/check_token_budget.py
         language: python
         files: '(SKILL\.md|references/.*\.md)$'
         exclude: '(eval-cases|templates|node_modules)/'
@@ -338,7 +338,7 @@ repos:
 
       - id: skill-prose-check
         name: Skill Prose Detector
-        entry: python3 pipeline/hooks/check_prose.py
+        entry: python pipeline/hooks/check_prose.py
         language: python
         files: '(SKILL\.md|references/.*\.md)$'
         exclude: '(eval-cases|templates)/'
@@ -346,7 +346,7 @@ repos:
 
       - id: skill-scripts
         name: Skill Script Quality
-        entry: python3 pipeline/hooks/check_scripts.py
+        entry: python pipeline/hooks/check_scripts.py
         language: python
         files: '(scripts/.*\.(py|sh|bash))$'
         exclude: '(eval-cases|templates|node_modules)/'
@@ -354,7 +354,7 @@ repos:
 
       - id: skill-commit-msg
         name: Skill Commit Message
-        entry: python3 pipeline/hooks/check_commit_msg.py
+        entry: python pipeline/hooks/check_commit_msg.py
         language: python
         stages: [commit-msg]
 ```
@@ -363,7 +363,7 @@ Key details:
 - **Security hook runs first** — fail fast on injection or sensitive access
 - Hard-tier hooks listed before warn-tier (fail-fast ordering)
 - Warn-tier hooks have `verbose: true` so warnings always display
-- All hooks use `python3` for portability
+- Hook `entry:` lines use `python` (not `python3`): pre-commit's managed virtualenv guarantees Python 3, and Windows virtualenvs lack `python3.exe`. Use `python3` only for system-level invocations (shell, CI, direct execution).
 - Commit message hook is on `commit-msg` stage
 
 ---

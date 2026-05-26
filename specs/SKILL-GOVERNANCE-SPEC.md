@@ -487,7 +487,7 @@ follows the exact command with no adaptation.
 
 ```markdown
 Step 3: Run migration.
-  `python scripts/migrate.py --verify --backup`
+  `python3 scripts/migrate.py --verify --backup`
   Do not modify the command or add additional flags.
 ```
 
@@ -597,7 +597,7 @@ as a loop rather than a linear sequence. This catches errors iteratively:
 
 ```markdown
 Step 3: Edit document XML.
-Step 4: Validate: `python scripts/validate.py unpacked_dir/`
+Step 4: Validate: `python3 scripts/validate.py unpacked_dir/`
   - If validation fails → review errors, fix, return to Step 4.
   - Only proceed when validation passes.
 Step 5: Rebuild document.
@@ -620,11 +620,11 @@ Step 2: Generate change plan.
   ```
 
 Step 3: Validate plan.
-  `python scripts/validate_changes.py changes.json`
+  `python3 scripts/validate_changes.py changes.json`
   If validation fails → fix plan, re-validate.
 
 Step 4: Apply validated plan.
-  `python scripts/apply_changes.py changes.json`
+  `python3 scripts/apply_changes.py changes.json`
 ```
 
 This is particularly valuable for batch file modifications, form filling,
@@ -637,7 +637,7 @@ analysis misses.
 
 ```markdown
 Step 5: Visual verification.
-  Convert output to image: `python scripts/render_preview.py output.pdf`
+  Convert output to image: `python3 scripts/render_preview.py output.pdf`
   Examine the rendered image. Verify layout matches expected format.
   If visual issues found → return to Step 3.
 ```

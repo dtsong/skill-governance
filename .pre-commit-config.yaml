@@ -1,3 +1,9 @@
+# Hook entries invoke `python` (not `python3`): with language: python,
+# pre-commit runs hooks inside a managed virtualenv whose interpreter is
+# guaranteed to be Python 3, and Windows virtualenvs ship `python.exe` only
+# (no `python3.exe`). Using `python3` here breaks native Windows. Everywhere
+# Python runs against the *system* interpreter (shell helpers, install.sh, CI,
+# direct script execution) we use `python3` to avoid Python 2.
 repos:
   - repo: local
     hooks:
@@ -5,7 +11,7 @@ repos:
 
       - id: skill-frontmatter
         name: Skill Frontmatter
-        entry: python3 pipeline/hooks/check_frontmatter.py
+        entry: python pipeline/hooks/check_frontmatter.py
         language: python
         files: 'SKILL\.md$'
         exclude: '(eval-cases/|templates/|node_modules/|pipeline/)'
@@ -14,7 +20,7 @@ repos:
 
       - id: skill-references
         name: Skill Reference Integrity
-        entry: python3 pipeline/hooks/check_references.py
+        entry: python pipeline/hooks/check_references.py
         language: python
         files: 'SKILL\.md$'
         exclude: '(eval-cases/|templates/|node_modules/|pipeline/)'
@@ -22,7 +28,7 @@ repos:
 
       - id: skill-isolation
         name: Skill Isolation
-        entry: python3 pipeline/hooks/check_isolation.py
+        entry: python pipeline/hooks/check_isolation.py
         language: python
         files: 'SKILL\.md$'
         exclude: '(eval-cases/|templates/|node_modules/|pipeline/)'
@@ -30,7 +36,7 @@ repos:
 
       - id: skill-context-load
         name: Suite Context Load
-        entry: python3 pipeline/hooks/check_context_load.py
+        entry: python pipeline/hooks/check_context_load.py
         language: python
         files: '(SKILL\.md|references/.*\.md|shared-references/.*\.md)$'
         exclude: '(eval-cases/|templates/|node_modules/|pipeline/)'
@@ -40,7 +46,7 @@ repos:
 
       - id: skill-token-budget
         name: Skill Token Budget (advisory)
-        entry: python3 pipeline/hooks/check_token_budget.py
+        entry: python pipeline/hooks/check_token_budget.py
         language: python
         files: '(SKILL\.md|references/.*\.md|shared-references/.*\.md)$'
         exclude: '(eval-cases/|templates/|node_modules/|pipeline/)'
@@ -49,7 +55,7 @@ repos:
 
       - id: skill-prose-check
         name: Skill Prose Check (advisory)
-        entry: python3 pipeline/hooks/check_prose.py
+        entry: python pipeline/hooks/check_prose.py
         language: python
         files: 'SKILL\.md$'
         exclude: '(eval-cases/|templates/|node_modules/|pipeline/)'
@@ -60,7 +66,7 @@ repos:
 
       - id: skill-commit-msg
         name: Skill Commit Message
-        entry: python3 pipeline/hooks/check_commit_msg.py
+        entry: python pipeline/hooks/check_commit_msg.py
         language: python
         stages: [commit-msg]
         always_run: true

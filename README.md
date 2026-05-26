@@ -199,7 +199,7 @@ skill-governance/
 
 - Python hooks and scripts use `os.path` for path handling, normalize paths to forward slashes, and open files with explicit `encoding="utf-8"` — so they behave identically on Windows, macOS, and Linux.
 - `.pre-commit-config.yaml` lives at the repo root (pre-commit's default location) and is committed as a regular file — no symlinks, so it checks out correctly on Windows.
-- Hook entries invoke `python3`; on native Windows use WSL or Git Bash (which provide `python3`). macOS and Linux work without extra setup.
+- Hook `entry:` lines invoke `python` (not `python3`): pre-commit's managed virtualenv guarantees Python 3, and Windows virtualenvs ship `python.exe` only. Shell helpers, `install.sh`, CI, and script examples use `python3`, which targets the system interpreter and avoids Python 2.
 - Shell helper scripts (`*.sh`) require bash — use WSL or Git Bash on Windows.
 
 ## Versioning
