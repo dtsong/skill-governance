@@ -110,6 +110,12 @@ skill-audit() {
     return $hard_status
 }
 
+# Suggest-first maintenance scan — budget allocation, verbose descriptions,
+# overlap/merge candidates, and unused skills. Reports only; never deletes.
+skill-clean() {
+    python3 pipeline/scripts/skill-cleaner.py "$@"
+}
+
 # Show context load breakdown for a suite
 skill-load() {
     local suite_dir="$1"

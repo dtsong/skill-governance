@@ -14,12 +14,16 @@ Small fixes (typos, broken links, clarifications that do not change behavior) ca
 
 1. Fork the repo and create a branch from `main`.
 2. Make your changes.
-3. Run all checks locally:
+3. Install the git hooks once so both the skill checks and the commit-message check run automatically (config lives at the repo root in `.pre-commit-config.yaml`):
+   ```bash
+   pre-commit install --hook-type pre-commit --hook-type commit-msg
+   ```
+4. Run all checks locally:
    ```bash
    pre-commit run --all-files
    ```
-4. If you modified hooks or scripts, run them against at least one real skill suite to verify behavior.
-5. Submit a PR with a clear description of what changed and why.
+5. If you modified hooks or scripts, run them against at least one real skill suite to verify behavior.
+6. Submit a PR with a clear description of what changed and why.
 
 ### PR requirements
 
@@ -63,6 +67,13 @@ All hooks live in `pipeline/hooks/` and share utilities from `_utils.py`.
 - **Include tests.** Add test cases that cover passing files, failing files, and edge cases (empty files, missing frontmatter, deeply nested references).
 - **Respect excludes.** Honor the `exclude` patterns in `pre-commit-config.yaml` -- templates, eval cases, and pipeline files are excluded from skill checks.
 - **Stay fast.** Pre-commit hooks must complete in under 2 seconds for typical suite sizes.
+
+### `python` vs `python3`
+
+Two distinct contexts, two distinct invocations:
+
+- **Hook `entry:` lines use `python`.** With `language: python`, pre-commit runs each hook inside a managed virtualenv whose interpreter is guaranteed to be Python 3 (pre-commit itself requires 3.9+). On native Windows that virtualenv ships `python.exe` only -- there is no `python3.exe` -- so `python3` in an entry line breaks Windows. This applies to `.pre-commit-config.yaml` and the hook template in `directive/SKILL-GOVERNANCE-INIT.md`.
+- **Everything else uses `python3`.** Shell helpers, `install.sh`, CI workflows, script shebangs, direct script execution, and command examples in docs all run against the *system* interpreter, where `python` may still be Python 2. Always use `python3` there.
 
 ### Testing hooks locally
 

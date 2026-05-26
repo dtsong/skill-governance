@@ -487,7 +487,7 @@ follows the exact command with no adaptation.
 
 ```markdown
 Step 3: Run migration.
-  `python scripts/migrate.py --verify --backup`
+  `python3 scripts/migrate.py --verify --backup`
   Do not modify the command or add additional flags.
 ```
 
@@ -597,7 +597,7 @@ as a loop rather than a linear sequence. This catches errors iteratively:
 
 ```markdown
 Step 3: Edit document XML.
-Step 4: Validate: `python scripts/validate.py unpacked_dir/`
+Step 4: Validate: `python3 scripts/validate.py unpacked_dir/`
   - If validation fails → review errors, fix, return to Step 4.
   - Only proceed when validation passes.
 Step 5: Rebuild document.
@@ -620,11 +620,11 @@ Step 2: Generate change plan.
   ```
 
 Step 3: Validate plan.
-  `python scripts/validate_changes.py changes.json`
+  `python3 scripts/validate_changes.py changes.json`
   If validation fails → fix plan, re-validate.
 
 Step 4: Apply validated plan.
-  `python scripts/apply_changes.py changes.json`
+  `python3 scripts/apply_changes.py changes.json`
 ```
 
 This is particularly valuable for batch file modifications, form filling,
@@ -637,7 +637,7 @@ analysis misses.
 
 ```markdown
 Step 5: Visual verification.
-  Convert output to image: `python scripts/render_preview.py output.pdf`
+  Convert output to image: `python3 scripts/render_preview.py output.pdf`
   Examine the rendered image. Verify layout matches expected format.
   If visual issues found → return to Step 3.
 ```
@@ -1329,6 +1329,25 @@ to identify gaps in coverage and guide new skill creation:
 | CI/CD | Pipeline generation and review | cicd-generation |
 | Runbooks | Operational procedures | git-workflows, github-workflow |
 | Infrastructure Ops | Deployment and infrastructure | dockerfile-generation, helm-generation |
+
+### 10.5 Skill Cleaning & Consolidation (v1.6)
+
+Periodic maintenance turns the review policies above (§10.3) into concrete
+candidates. `pipeline/scripts/skill-cleaner.py` (alias `skill-clean`) scans the
+repository and reports four classes of candidate:
+
+1. **Budget allocation** — total skill footprint and its share of the context window.
+2. **Verbose descriptions** — descriptions far above the 40–80 word target (token waste).
+3. **Overlap / merge candidates** — skill pairs with high name+description similarity.
+4. **Unused skills** — inventoried skills with zero telemetry invocations in the window (§10.3).
+
+**Suggest-first mandate:** the tool reports only. It never deletes, merges, or
+edits skills — a human approves every action. Thresholds and a `preserve` list
+(policy-encoding and maintainer skills never flagged) live in the `cleaner` block
+of `pipeline/config/budgets.json`.
+
+Cleaning identifies *what* to consolidate; `guides/skill-audit-refactor-prompt.md`
+drives *how* to refactor or merge the resulting candidates.
 
 ---
 

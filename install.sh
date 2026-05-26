@@ -308,7 +308,7 @@ install_pipeline() {
 
   # Copy pre-commit config template
   if [[ ! -f "$dst_root/.pre-commit-config.yaml" ]]; then
-    cp "$src_root/pipeline/pre-commit-config.yaml" "$dst_root/.pre-commit-config.yaml"
+    cp "$src_root/.pre-commit-config.yaml" "$dst_root/.pre-commit-config.yaml"
     log "  Created .pre-commit-config.yaml"
   else
     log "  Skipped .pre-commit-config.yaml (already exists)"

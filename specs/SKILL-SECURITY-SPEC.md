@@ -542,7 +542,7 @@ Add to `.pre-commit-config.yaml`:
 ```yaml
       - id: skill-security
         name: Skill Security Scan
-        entry: python3 pipeline/hooks/check_security.py
+        entry: python pipeline/hooks/check_security.py
         language: python
         files: '(SKILL\.md|references/.*\.md|scripts/.*)$'
         exclude: '(eval-cases|templates|node_modules)/'

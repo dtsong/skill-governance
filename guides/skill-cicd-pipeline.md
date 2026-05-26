@@ -149,7 +149,7 @@ jobs:
         run: bash pipeline/scripts/check-token-budgets.sh skills/
 
       - name: Validate frontmatter
-        run: python pipeline/scripts/check-frontmatter.py skills/
+        run: python3 pipeline/scripts/check-frontmatter.py skills/
 
       - name: Check reference integrity
         run: bash pipeline/scripts/check-references.sh skills/
@@ -160,7 +160,7 @@ jobs:
       - name: Generate budget report
         if: github.event_name == 'pull_request'
         run: |
-          python pipeline/scripts/budget-report.py skills/ > budget-report.md
+          python3 pipeline/scripts/budget-report.py skills/ > budget-report.md
           cat budget-report.md >> $GITHUB_STEP_SUMMARY
 ```
 
@@ -532,13 +532,13 @@ jobs:
           echo "$CHANGED"
 
       - name: Run pattern compliance check
-        run: python pipeline/scripts/analyze-patterns.py skills/
+        run: python3 pipeline/scripts/analyze-patterns.py skills/
 
       - name: Check portability (Claude Code + Codex)
         run: bash pipeline/scripts/check-portability.sh skills/
 
       - name: Worst-case context load analysis
-        run: python pipeline/scripts/context-load-analysis.py skills/
+        run: python3 pipeline/scripts/context-load-analysis.py skills/
 
       - name: Generate PR comment with analysis
         if: always()
@@ -811,7 +811,7 @@ jobs:
             --model "${{ inputs.model || 'sonnet' }}"
 
       - name: Process eval results
-        run: python pipeline/scripts/process-eval-results.py eval-results/
+        run: python3 pipeline/scripts/process-eval-results.py eval-results/
 
       - name: Upload eval artifacts
         uses: actions/upload-artifact@v4
@@ -821,7 +821,7 @@ jobs:
 
       - name: Check for regressions
         run: |
-          python pipeline/scripts/check-regressions.py \
+          python3 pipeline/scripts/check-regressions.py \
             --current eval-results/ \
             --baseline eval-baselines/
 ```
@@ -1075,5 +1075,5 @@ git -C your-skills-repo config core.hooksPath .githooks
 cd your-skills-repo
 bash pipeline/scripts/check-token-budgets.sh skills/
 bash pipeline/scripts/validate-structure.sh skills/
-python pipeline/scripts/check-frontmatter.py skills/
+python3 pipeline/scripts/check-frontmatter.py skills/
 ```

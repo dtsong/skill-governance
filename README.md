@@ -175,11 +175,13 @@ Source in your shell: `source pipeline/shell-helpers.sh`
 | `skill-new <name>` | Scaffold a new standalone skill |
 | `skill-new-suite <name>` | Scaffold a new skill suite |
 | `skill-load <suite-dir>` | Show context load breakdown for a suite |
+| `skill-clean` | Suggest-first maintenance scan: budget allocation, verbose descriptions, overlap/merge candidates, unused skills |
 
 ## Repo Structure
 
 ```
 skill-governance/
+├── .pre-commit-config.yaml    # Hook definitions (repo root, per pre-commit convention)
 ├── specs/                     # Normative specifications
 ├── directive/                 # Compact directives for instruction files
 ├── guides/                    # Authoring guides and patterns
@@ -189,16 +191,16 @@ skill-governance/
 │   ├── config/                # Default budgets, security, routing configs
 │   ├── templates/             # Scaffolding for new skills and suites
 │   ├── workflows/             # GitHub Actions CI workflows
-│   ├── shell-helpers.sh       # CLI helpers
-│   └── pre-commit-config.yaml # Hook definitions
+│   └── shell-helpers.sh       # CLI helpers
 └── install.sh                 # Installer for skill suite repos
 ```
 
 ## Platform Compatibility
 
-- Python hooks use `pathlib.Path` and work cross-platform (Windows, macOS, Linux).
+- Python hooks and scripts use `os.path` for path handling, normalize paths to forward slashes, and open files with explicit `encoding="utf-8"` — so they behave identically on Windows, macOS, and Linux.
+- `.pre-commit-config.yaml` lives at the repo root (pre-commit's default location) and is committed as a regular file — no symlinks, so it checks out correctly on Windows.
+- Hook `entry:` lines invoke `python` (not `python3`): pre-commit's managed virtualenv guarantees Python 3, and Windows virtualenvs ship `python.exe` only. Shell helpers, `install.sh`, CI, and script examples use `python3`, which targets the system interpreter and avoids Python 2.
 - Shell helper scripts (`*.sh`) require bash — use WSL or Git Bash on Windows.
-- No additional configuration is needed for Windows users running in WSL.
 
 ## Versioning
 
