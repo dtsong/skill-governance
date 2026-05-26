@@ -236,7 +236,9 @@ def is_preserved(rel_dir, name, preserve):
 
 def significant_words(record):
     """Set of meaningful tokens from a skill's name and description."""
-    text = record["name"].replace("-", " ") + " " + record["description"].lower()
+    # Lowercase the whole composed string — WORD_RE is [a-z0-9]+, so an
+    # un-lowered capital in a skill name would silently drop/split its tokens.
+    text = (record["name"].replace("-", " ") + " " + record["description"]).lower()
     return {w for w in WORD_RE.findall(text) if len(w) > 2 and w not in STOPWORDS}
 
 
@@ -343,7 +345,10 @@ def build_results(repo_root, cfg, days, context_window, telemetry_file, use_tele
     telemetry_diag = {"malformed_ts": 0, "bad_json": 0}
     if use_telemetry:
         seen, telemetry_status, telemetry_diag = load_telemetry_skills(telemetry_file, days)
-        if telemetry_status in ("ok", "empty"):
+        # Only "ok" yields a meaningful unused list. Under "empty" `seen` is
+        # empty, which would flag every skill as unused — the text renderer
+        # hides that, but --json would leak the bogus list, so gate it out here.
+        if telemetry_status == "ok":
             for rel, r in sorted(skills.items()):
                 if r["name"] in seen:
                     continue
