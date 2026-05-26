@@ -4,6 +4,8 @@
 # (no `python3.exe`). Using `python3` here breaks native Windows. Everywhere
 # Python runs against the *system* interpreter (shell helpers, install.sh, CI,
 # direct script execution) we use `python3` to avoid Python 2.
+default_language_version:
+  python: python3
 repos:
   - repo: local
     hooks:

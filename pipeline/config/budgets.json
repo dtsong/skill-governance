@@ -11,7 +11,7 @@
   "max_simultaneous_tokens": 5500,
   "cleaner": {
     "context_window": 200000,
-    "verbose_description_words": 100,
+    "verbose_description_words": 80,
     "overlap_threshold": 0.6,
     "unused_days": 30,
     "preserve": [

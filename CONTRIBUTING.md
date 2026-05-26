@@ -75,8 +75,6 @@ Two distinct contexts, two distinct invocations:
 - **Hook `entry:` lines use `python`.** With `language: python`, pre-commit runs each hook inside a managed virtualenv whose interpreter is guaranteed to be Python 3 (pre-commit itself requires 3.9+). On native Windows that virtualenv ships `python.exe` only -- there is no `python3.exe` -- so `python3` in an entry line breaks Windows. This applies to `.pre-commit-config.yaml` and the hook template in `directive/SKILL-GOVERNANCE-INIT.md`.
 - **Everything else uses `python3`.** Shell helpers, `install.sh`, CI workflows, script shebangs, direct script execution, and command examples in docs all run against the *system* interpreter, where `python` may still be Python 2. Always use `python3` there.
 
-`uv run ... python` is a managed-environment case (uv resolves a Python 3 interpreter), so it stays `python`.
-
 ### Testing hooks locally
 
 ```bash

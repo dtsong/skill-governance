@@ -5,7 +5,7 @@ Reports four classes of cleanup candidates WITHOUT modifying or deleting anythin
 (SKILL-GOVERNANCE-SPEC §10.5). A human approves every removal or merge.
 
   1. Budget allocation    — total skill footprint and its share of the context window
-  2. Verbose descriptions — frontmatter descriptions far above the spec target
+  2. Verbose descriptions — frontmatter descriptions above the spec's 40-80 word target
   3. Overlap candidates   — skill pairs with high name+description similarity (possible merge)
   4. Unused skills        — inventoried skills with zero telemetry invocations in a window
 
@@ -29,7 +29,7 @@ from _utils import classify_file, is_excluded  # noqa: E402
 
 TOKEN_RATIO = 1.33
 DEFAULT_CONTEXT_WINDOW = 200000
-DEFAULT_VERBOSE_DESCRIPTION_WORDS = 100
+DEFAULT_VERBOSE_DESCRIPTION_WORDS = 80  # matches the spec's 40-80 word target ceiling
 DEFAULT_OVERLAP_THRESHOLD = 0.6
 DEFAULT_UNUSED_DAYS = 30
 DEFAULT_TELEMETRY_FILE = os.path.expanduser("~/.claude/telemetry/skill-usage.jsonl")
@@ -142,7 +142,9 @@ def file_tokens(filepath):
     try:
         with open(filepath, "r", encoding="utf-8") as f:
             words = len(f.read().split())
-    except (OSError, UnicodeDecodeError):
+    except (OSError, UnicodeDecodeError) as e:
+        print(f"WARNING: could not read {filepath} ({e}); counted as 0 tokens",
+              file=sys.stderr)
         return 0
     return int(math.ceil(words * TOKEN_RATIO))
 
@@ -182,7 +184,9 @@ def build_inventory(repo_root):
         try:
             with open(full, "r", encoding="utf-8") as f:
                 text = f.read()
-        except (OSError, UnicodeDecodeError):
+        except (OSError, UnicodeDecodeError) as e:
+            print(f"WARNING: could not read {full} ({e}); "
+                  "description and footprint will be understated", file=sys.stderr)
             text = ""
         fm = extract_frontmatter(text)
         description = (fm.get("description") or "").strip()
@@ -261,6 +265,7 @@ def load_telemetry_skills(telemetry_file, days):
     cutoff = datetime.now(timezone.utc) - timedelta(days=days)
     seen = set()
     parsed_any = False
+    malformed_ts = 0
     try:
         with open(telemetry_file, "r", encoding="utf-8") as f:
             for line in f:
@@ -284,12 +289,19 @@ def load_telemetry_skills(telemetry_file, days):
                         if when < cutoff:
                             continue
                     except ValueError:
-                        pass  # undated entry: count it rather than drop silently
+                        # Present-but-unparseable timestamp: count the skill as
+                        # seen (conservative — avoids a false "unused" flag) but
+                        # track it so the report can disclose the bypassed window.
+                        malformed_ts += 1
                 seen.add(skill)
     except OSError as e:
         return set(), f"error reading telemetry: {e}"
 
-    return seen, "ok" if parsed_any else "empty"
+    if not parsed_any:
+        return seen, "empty"
+    if malformed_ts:
+        return seen, f"ok ({malformed_ts} entries had unparseable timestamps, counted as in-window)"
+    return seen, "ok"
 
 
 # ---------------------------------------------------------------------------
@@ -428,6 +440,8 @@ def main():
     context_window = args.context_window if args.context_window is not None else cfg["context_window"]
     if context_window <= 0:
         raise SystemExit("ERROR: --context-window must be positive")
+    if days < 0:
+        raise SystemExit("ERROR: --days must be non-negative")
 
     res = build_results(repo_root, cfg, days, context_window,
                         args.telemetry_file, not args.no_telemetry)

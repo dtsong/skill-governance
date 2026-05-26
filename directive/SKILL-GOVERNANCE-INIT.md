@@ -281,6 +281,8 @@ Create all hook scripts in `pipeline/hooks/`. Each hook must:
 Generate the pre-commit configuration:
 
 ```yaml
+default_language_version:
+  python: python3
 repos:
   - repo: local
     hooks:
