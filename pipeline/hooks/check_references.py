@@ -60,6 +60,10 @@ def _looks_like_file_path(s):
     # Filter out URLs
     if s.startswith("http://") or s.startswith("https://"):
         return False
+    # Filter out angle-bracket placeholders (e.g. `<source>.ob1/`, `<name>/`)
+    # — a documentation convention for substitutable values, never a real path.
+    if "<" in s or ">" in s:
+        return False
     # Filter out things that are clearly not paths
     if " " in s:
         return False

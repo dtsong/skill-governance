@@ -14,12 +14,16 @@ Small fixes (typos, broken links, clarifications that do not change behavior) ca
 
 1. Fork the repo and create a branch from `main`.
 2. Make your changes.
-3. Run all checks locally:
+3. Install the git hooks once (the root `.pre-commit-config.yaml` is a symlink to `pipeline/pre-commit-config.yaml`, so both the skill checks and the commit-message check run automatically):
+   ```bash
+   pre-commit install --hook-type pre-commit --hook-type commit-msg
+   ```
+4. Run all checks locally:
    ```bash
    pre-commit run --all-files
    ```
-4. If you modified hooks or scripts, run them against at least one real skill suite to verify behavior.
-5. Submit a PR with a clear description of what changed and why.
+5. If you modified hooks or scripts, run them against at least one real skill suite to verify behavior.
+6. Submit a PR with a clear description of what changed and why.
 
 ### PR requirements
 
