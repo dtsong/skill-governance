@@ -181,6 +181,7 @@ Source in your shell: `source pipeline/shell-helpers.sh`
 
 ```
 skill-governance/
+├── .pre-commit-config.yaml    # Hook definitions (repo root, per pre-commit convention)
 ├── specs/                     # Normative specifications
 ├── directive/                 # Compact directives for instruction files
 ├── guides/                    # Authoring guides and patterns
@@ -190,16 +191,16 @@ skill-governance/
 │   ├── config/                # Default budgets, security, routing configs
 │   ├── templates/             # Scaffolding for new skills and suites
 │   ├── workflows/             # GitHub Actions CI workflows
-│   ├── shell-helpers.sh       # CLI helpers
-│   └── pre-commit-config.yaml # Hook definitions
+│   └── shell-helpers.sh       # CLI helpers
 └── install.sh                 # Installer for skill suite repos
 ```
 
 ## Platform Compatibility
 
-- Python hooks use `pathlib.Path` and work cross-platform (Windows, macOS, Linux).
+- Python hooks and scripts use `os.path` for path handling, normalize paths to forward slashes, and open files with explicit `encoding="utf-8"` — so they behave identically on Windows, macOS, and Linux.
+- `.pre-commit-config.yaml` lives at the repo root (pre-commit's default location) and is committed as a regular file — no symlinks, so it checks out correctly on Windows.
+- Hook entries invoke `python3`; on native Windows use WSL or Git Bash (which provide `python3`). macOS and Linux work without extra setup.
 - Shell helper scripts (`*.sh`) require bash — use WSL or Git Bash on Windows.
-- No additional configuration is needed for Windows users running in WSL.
 
 ## Versioning
 

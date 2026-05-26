@@ -14,7 +14,7 @@ Small fixes (typos, broken links, clarifications that do not change behavior) ca
 
 1. Fork the repo and create a branch from `main`.
 2. Make your changes.
-3. Install the git hooks once (the root `.pre-commit-config.yaml` is a symlink to `pipeline/pre-commit-config.yaml`, so both the skill checks and the commit-message check run automatically):
+3. Install the git hooks once so both the skill checks and the commit-message check run automatically (config lives at the repo root in `.pre-commit-config.yaml`):
    ```bash
    pre-commit install --hook-type pre-commit --hook-type commit-msg
    ```
