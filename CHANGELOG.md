@@ -5,6 +5,13 @@ All notable changes to this project are documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- **Skill Cleaning & Consolidation** (§10.5) — `pipeline/scripts/skill-cleaner.py` (alias `skill-clean`), a suggest-first maintenance analyzer reporting budget allocation, verbose descriptions, overlap/merge candidates, and unused skills (from telemetry). Reports only — never deletes or merges.
+- `cleaner` config block in `pipeline/config/budgets.json` — preserve-list and tunable thresholds (`verbose_description_words`, `overlap_threshold`, `unused_days`, `context_window`).
+- Shell helper: `skill-clean`.
+
 ## [v1.5.0] - 2026-03-18
 
 ### Added

@@ -175,6 +175,7 @@ Source in your shell: `source pipeline/shell-helpers.sh`
 | `skill-new <name>` | Scaffold a new standalone skill |
 | `skill-new-suite <name>` | Scaffold a new skill suite |
 | `skill-load <suite-dir>` | Show context load breakdown for a suite |
+| `skill-clean` | Suggest-first maintenance scan: budget allocation, verbose descriptions, overlap/merge candidates, unused skills |
 
 ## Repo Structure
 

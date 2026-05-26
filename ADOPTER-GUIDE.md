@@ -135,6 +135,14 @@ Common advisory warnings:
 
 Budget overages are acceptable when justified by eval data. Document overrides in `pipeline/config/budgets.json`.
 
+### 4b. Run a maintenance scan periodically
+
+```bash
+skill-clean
+```
+
+`skill-clean` is suggest-first — it reports candidates, never deletes or merges. It surfaces total skill footprint as a share of the context window, overly verbose descriptions, skill pairs that may be duplicates (merge candidates), and skills with no telemetry usage in the window. Tune thresholds and the `preserve` list (skills never flagged) in the `cleaner` block of `pipeline/config/budgets.json`. See spec §10.5.
+
 ### 5. Restructure into suites if applicable
 
 If you have more than 3 related skills, consider organizing them as a suite:

@@ -1330,6 +1330,25 @@ to identify gaps in coverage and guide new skill creation:
 | Runbooks | Operational procedures | git-workflows, github-workflow |
 | Infrastructure Ops | Deployment and infrastructure | dockerfile-generation, helm-generation |
 
+### 10.5 Skill Cleaning & Consolidation (v1.6)
+
+Periodic maintenance turns the review policies above (§10.3) into concrete
+candidates. `pipeline/scripts/skill-cleaner.py` (alias `skill-clean`) scans the
+repository and reports four classes of candidate:
+
+1. **Budget allocation** — total skill footprint and its share of the context window.
+2. **Verbose descriptions** — descriptions far above the 40–80 word target (token waste).
+3. **Overlap / merge candidates** — skill pairs with high name+description similarity.
+4. **Unused skills** — inventoried skills with zero telemetry invocations in the window (§10.3).
+
+**Suggest-first mandate:** the tool reports only. It never deletes, merges, or
+edits skills — a human approves every action. Thresholds and a `preserve` list
+(policy-encoding and maintainer skills never flagged) live in the `cleaner` block
+of `pipeline/config/budgets.json`.
+
+Cleaning identifies *what* to consolidate; `guides/skill-audit-refactor-prompt.md`
+drives *how* to refactor or merge the resulting candidates.
+
 ---
 
 ## 11. Distribution & Marketplace Lifecycle (v1.5)
